@@ -20,7 +20,7 @@ Instead of sitting on the couch pressing buttons, this game requires you to phys
 The controls are simple, but the workout is real!
 
 - **🏃 Jog / Sprint:** Jog in place to build up your speed multiplier. The game tracks ankle oscillations (webcam) or zero-crossings and variance thresholds (phone) to measure your jogging intensity.
-- **🦘 Jump:** Physically jump up to hurdle over low obstacles. Our custom physics filter differentiates between the high-frequency shockwaves of heavy jogging and a deliberate, sustained vertical jump (e.g. 4G of force) to trigger the jump.
+- **🦘 Jump:** Physically jump up to hurdle over low obstacles. Our custom physics filter differentiates between the high-frequency shockwaves of heavy jogging and a deliberate, sustained vertical jump (e.g. 4G of force) to trigger the jump. *(Note for Phone Mode: Keep the phone held vertically straight for the most reliable jump detection!)*
 - **🧎 Squat:** Drop down into a squat to slide underneath high obstacles. The game calculates the vertical velocity of your hips and shoulders (webcam) or looks for a sustained drop in the Y-axis (phone) to trigger the duck.
 
 ## 🚀 Getting Started
@@ -58,7 +58,7 @@ This project is highly experimental and relies on bleeding-edge browser APIs. He
 **Phone Controller Mode:**
 - **HTTPS Tunneling Dependency:** Modern mobile browsers strictly require a secure `HTTPS` context to access the `DeviceMotion` API. Because of this, running the server on `localhost` isn't enough; you currently have to use `ngrok` (or similar tunneling software) to route your phone traffic securely to your PC. 
 - **Jogging Detection:** While jumps and squats are accurately filtered, parsing the chaotic 3-axis accelerometer data of a "jogging in place" motion is incredibly tricky. The physics filter sometimes struggles to differentiate a slow jog from standing idle, or a highly aggressive sprint from a jumping shockwave.
-- **Squat Detection Quirk:** Squat detection can sometimes be inconsistent depending on the angle you hold the phone, but tilting/laying the phone flat while dropping into a squat seems to work much more reliably.
+- **Gesture Angles (Jump/Squat):** Because the physics engine relies heavily on gravity mapping along the phone's Y-axis, holding the phone at extreme angles can occasionally throw off detection. For the best experience, try to hold the phone vertically straight while jumping, and tilt it flat when dropping into a squat.
 
 **AI Webcam Mode:**
 - **Environmental Dependency:** AI pose detection is heavily reliant on good lighting and clear contrast between you and your background.
