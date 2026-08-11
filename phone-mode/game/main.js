@@ -73,6 +73,12 @@ function initSensorInput() {
       }
     }
   }, 500);
+
+  // Wire up remote restart command
+  sensorInput.onRestartCommand = () => {
+    if (game) game.destroy();
+    startGame();
+  };
 }
 
 // Gesture processing loop
@@ -128,12 +134,23 @@ function startGame() {
 
   game = new Game(gameCanvas);
 
-  game.onGameOver = (result) => {
+    game.onGameOver = (result) => {
     finalScore.textContent = result.score;
     const gestures = sensorInput ? sensorInput.getGestureState() : null;
     statJumps.textContent = gestures ? gestures.jumpCount : 0;
     statSquats.textContent = gestures ? gestures.squatCount : 0;
     statTime.textContent = `${Math.floor(result.time / 1000)}s`;
+
+    // Beam stats to phone
+    if (sensorInput) {
+      sensorInput.sendMessage({
+        type: 'gameover',
+        score: result.score,
+        time: Math.floor(result.time / 1000),
+        jumps: gestures ? gestures.jumpCount : 0,
+        squats: gestures ? gestures.squatCount : 0
+      });
+    }
 
     setTimeout(() => {
       showScreen(gameoverScreen);
@@ -160,6 +177,9 @@ btnHome.addEventListener('click', () => {
   if (game) {
     game.destroy();
     game = null;
+  }
+  if (sensorInput) {
+    sensorInput.sendMessage({ type: 'home' });
   }
   showScreen(startScreen);
 });

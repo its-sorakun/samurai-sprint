@@ -44,6 +44,13 @@ wss.on('connection', (ws, req) => {
       ws.send(JSON.stringify({ type: 'controller_status', connected: true }));
     }
 
+    ws.on('message', (data) => {
+      // Relay messages (like gameover stats) from game to phone
+      if (controllerClient && controllerClient.readyState === 1) {
+        controllerClient.send(data.toString());
+      }
+    });
+
     ws.on('close', () => {
       console.log('🎮 Game client disconnected');
       gameClient = null;

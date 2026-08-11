@@ -8,6 +8,7 @@ export class SensorInput {
   constructor() {
     this.ws = null;
     this.connected = false;
+    this.onRestartCommand = null;
 
     // Raw sensor values
     this.accelX = 0;
@@ -58,21 +59,19 @@ export class SensorInput {
 
     this.ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-
-        if (data.type === 'controller_status') {
-          this.connected = data.connected;
-          if (!data.connected) {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'controller_status') {
+          this.connected = msg.connected;
+          if (!msg.connected) {
             this.calibrated = false;
             this.calibrationSamples = [];
           }
-          return;
-        }
-
-        if (data.type === 'motion') {
-          this.accelX = data.x;
-          this.accelY = data.y;
-          this.accelZ = data.z;
+        } else if (msg.type === 'restart') {
+          if (this.onRestartCommand) this.onRestartCommand();
+        } else if (msg.type === 'motion') {
+          this.accelX = msg.x;
+          this.accelY = msg.y;
+          this.accelZ = msg.z;
           this._processMotion();
         }
       } catch (e) {
@@ -223,6 +222,12 @@ export class SensorInput {
 
   isControllerConnected() {
     return this.connected;
+  }
+
+  sendMessage(data) {
+    if (this.ws && this.ws.readyState === 1 && this.connected) {
+      this.ws.send(JSON.stringify(data));
+    }
   }
 
   resetStats() {

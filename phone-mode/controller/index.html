@@ -162,6 +162,47 @@
       padding: 8px 14px; border-radius: 999px;
       font-size: 0.8rem; color: var(--text-secondary);
     }
+
+    /* Game Over UI */
+    .gameover-container {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 100%; max-width: 320px;
+      padding: 24px 20px;
+      background: rgba(20, 20, 35, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(195, 60, 60, 0.4);
+      border-radius: 16px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .gameover-title {
+      font-size: 1.8rem; font-weight: 900;
+      color: var(--torii-red);
+      margin-bottom: 8px;
+    }
+    .score-large {
+      font-size: 3.5rem; font-weight: 900; font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, var(--gold-accent), var(--gold-bright));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin: 10px 0;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;
+      margin: 20px 0;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px;
+    }
+    .stat-box .label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+    .stat-box .val { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    
+    .btn-restart {
+      background: linear-gradient(135deg, var(--torii-red), #e53935);
+      color: #fff; box-shadow: 0 4px 24px rgba(195, 60, 60, 0.3);
+      width: 100%;
+    }
+    .btn-restart:hover { box-shadow: 0 8px 32px rgba(195, 60, 60, 0.5); transform: translateY(-2px); }
+    .btn-restart:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
@@ -172,43 +213,71 @@
       <p class="subtitle">Hold your phone while you move</p>
     </div>
 
-    <div class="status-card">
-      <div>
-        <span class="status-dot disconnected" id="status-dot"></span>
-        <span id="status-text">Not connected</span>
+    <!-- MAIN CONTROLLER UI -->
+    <div id="main-ui" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+      <div class="status-card">
+        <div>
+          <span class="status-dot disconnected" id="status-dot"></span>
+          <span id="status-text">Not connected</span>
+        </div>
+
+        <div class="sensor-display" id="sensor-display" style="display:none;">
+          <div class="sensor-value">
+            <div class="sensor-label">X</div>
+            <div class="sensor-num" id="ax">0.0</div>
+          </div>
+          <div class="sensor-value">
+            <div class="sensor-label">Y</div>
+            <div class="sensor-num" id="ay">0.0</div>
+          </div>
+          <div class="sensor-value">
+            <div class="sensor-label">Z</div>
+            <div class="sensor-num" id="az">0.0</div>
+          </div>
+        </div>
+
+        <div class="action-display idle" id="action-display">
+          Standing
+        </div>
       </div>
 
-      <div class="sensor-display" id="sensor-display" style="display:none;">
-        <div class="sensor-value">
-          <div class="sensor-label">X</div>
-          <div class="sensor-num" id="ax">0.0</div>
-        </div>
-        <div class="sensor-value">
-          <div class="sensor-label">Y</div>
-          <div class="sensor-num" id="ay">0.0</div>
-        </div>
-        <div class="sensor-value">
-          <div class="sensor-label">Z</div>
-          <div class="sensor-num" id="az">0.0</div>
-        </div>
+      <button class="btn-start" id="btn-connect" style="margin-top: 20px;">
+        📡 Connect & Start Sensors
+      </button>
+
+      <div class="instructions" style="margin-top: 20px;">
+        <div class="instruction-item">🦘 Jump in real life to jump in game</div>
+        <div class="instruction-item">🧎 Squat to duck under obstacles</div>
+        <div class="instruction-item">🏃 Jog in place for speed boost</div>
       </div>
 
-      <div class="action-display idle" id="action-display">
-        Standing
-      </div>
+      <p class="note" style="margin-top: 15px;">Keep your phone in your hand or pocket. Both devices must be on the same WiFi.</p>
     </div>
 
-    <button class="btn-start" id="btn-connect">
-      📡 Connect & Start Sensors
-    </button>
+    <!-- GAME OVER UI -->
+    <div id="gameover-ui" class="gameover-container" style="display:none;">
+      <div class="gameover-title">GAME OVER</div>
+      <div class="score-large" id="go-score">0</div>
+      
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="label">Time</div>
+          <div class="val" id="go-time">0s</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Jumps</div>
+          <div class="val" id="go-jumps">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">Squats</div>
+          <div class="val" id="go-squats">0</div>
+        </div>
+      </div>
 
-    <div class="instructions">
-      <div class="instruction-item">🦘 Jump in real life to jump in game</div>
-      <div class="instruction-item">🧎 Squat to duck under obstacles</div>
-      <div class="instruction-item">🏃 Jog in place for speed boost</div>
+      <button class="btn-start btn-restart" id="btn-restart" style="margin-top:10px;">
+        🔄 Play Again
+      </button>
     </div>
-
-    <p class="note">Keep your phone in your hand or pocket. Both devices must be on the same WiFi.</p>
   </div>
 
   <script>
@@ -246,6 +315,25 @@
       ws.onclose = () => {
         setStatus('disconnected', 'Disconnected');
         stopSensors();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.type === 'gameover') {
+            document.getElementById('main-ui').style.display = 'none';
+            document.getElementById('gameover-ui').style.display = 'flex';
+            document.getElementById('go-score').textContent = msg.score;
+            document.getElementById('go-time').textContent = msg.time + 's';
+            document.getElementById('go-jumps').textContent = msg.jumps;
+            document.getElementById('go-squats').textContent = msg.squats;
+          } 
+          else if (msg.type === 'home') {
+            document.getElementById('gameover-ui').style.display = 'none';
+            document.getElementById('main-ui').style.display = 'flex';
+          }
+        } catch(e) {}
       };
 
       ws.onerror = () => {
@@ -339,6 +427,14 @@
 
     btnConnect.addEventListener('click', () => {
       connectWebSocket();
+    });
+
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'restart' }));
+      }
+      document.getElementById('gameover-ui').style.display = 'none';
+      document.getElementById('main-ui').style.display = 'flex';
     });
   </script>
 </body>
