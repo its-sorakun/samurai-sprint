@@ -58,6 +58,7 @@ This project is highly experimental and relies on bleeding-edge browser APIs. He
 **Phone Controller Mode:**
 - **HTTPS Tunneling Dependency:** Modern mobile browsers strictly require a secure `HTTPS` context to access the `DeviceMotion` API. Because of this, running the server on `localhost` isn't enough; you currently have to use `ngrok` (or similar tunneling software) to route your phone traffic securely to your PC. 
 - **Jogging Detection:** While jumps and squats are accurately filtered, parsing the chaotic 3-axis accelerometer data of a "jogging in place" motion is incredibly tricky. The physics filter sometimes struggles to differentiate a slow jog from standing idle, or a highly aggressive sprint from a jumping shockwave.
+- **Squat Detection Quirk:** Squat detection can sometimes be inconsistent depending on the angle you hold the phone, but tilting/laying the phone flat while dropping into a squat seems to work much more reliably.
 
 **AI Webcam Mode:**
 - **Environmental Dependency:** AI pose detection is heavily reliant on good lighting and clear contrast between you and your background.
