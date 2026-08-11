@@ -99,12 +99,9 @@ export class Game {
 
     this.player.squat(gestureState.isSquatting);
 
-    // Jog boost — ramp up fast, decay slowly for a responsive sprint feel
-    if (gestureState.jogDetected) {
-      this.jogBoost = Math.min(1, this.jogBoost + 0.15 * Math.max(0.3, gestureState.jogIntensity));
-    } else {
-      this.jogBoost = Math.max(0, this.jogBoost - 0.01);
-    }
+    // Store state for the fixed timestep physics loop
+    this.currentJogDetected = gestureState.jogDetected;
+    this.currentJogIntensity = gestureState.jogIntensity;
   }
 
   _gameLoop(timestamp) {
@@ -133,6 +130,14 @@ export class Game {
   _update(dt) {
     // Update elapsed time
     this.elapsedTime = Date.now() - this.startTime;
+
+    // Smooth jog boost (calculated at fixed 60fps)
+    // Ramp up over ~0.5s, decay over ~1s. This prevents 1-frame false positives from spiking speed.
+    if (this.currentJogDetected) {
+      this.jogBoost = Math.min(1, this.jogBoost + 0.03 * Math.max(0.3, this.currentJogIntensity));
+    } else {
+      this.jogBoost = Math.max(0, this.jogBoost - 0.015);
+    }
 
     // Difficulty ramp: increase every 10 seconds
     this.difficultyTimer += dt;
