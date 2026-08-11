@@ -27,11 +27,13 @@ export class SensorInput {
     // Jump detection
     this.isJumping = false;
     this.jumpCooldown = 0;
+    this.jumpFrames = 0;
     this.jumpCount = 0;
 
     // Squat detection
     this.isSquatting = false;
     this.squatCooldown = 0;
+    this.squatFrames = 0;
     this.squatCount = 0;
 
     // Jog detection
@@ -126,9 +128,14 @@ export class SensorInput {
     }
 
     // ===== JUMP DETECTION =====
-    // Jump requires a MASSIVE spike in acceleration (e.g. 25+ m/s^2 deviation from gravity)
-    // This requires a very hard flick of the hand or a real jump.
-    if (magDeviation > 25 && this.jumpCooldown === 0 && !this.isJumping) {
+    // Jump requires a sustained spike in acceleration (filters out 1-frame foot stomp shockwaves from jogging)
+    if (magDeviation > 18) {
+      this.jumpFrames++;
+    } else {
+      this.jumpFrames = 0;
+    }
+
+    if (this.jumpFrames >= 3 && this.jumpCooldown === 0 && !this.isJumping) {
       this.isJumping = true;
       this.jumpCooldown = 25; // ~830ms at 30Hz
       this.jogCooldown = 45; // ~1.5s blocks landing impact from triggering sprint
@@ -138,8 +145,14 @@ export class SensorInput {
     }
 
     // ===== SQUAT DETECTION =====
-    // Requires the Y-axis to drop by at least 8 (meaning phone is almost horizontal or in freefall)
-    if (yDelta < -8 && this.squatCooldown === 0 && !this.isSquatting && magDeviation < 20) {
+    // Requires the Y-axis to drop significantly for a sustained period (filters out heavy downward jog steps)
+    if (yDelta < -7) {
+      this.squatFrames++;
+    } else {
+      this.squatFrames = 0;
+    }
+
+    if (this.squatFrames >= 3 && this.squatCooldown === 0 && !this.isSquatting && magDeviation < 20) {
       this.isSquatting = true;
       this.squatCooldown = 20;
       this.jogCooldown = 30; // 1s block
