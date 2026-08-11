@@ -38,6 +38,7 @@ export class SensorInput {
     this.magnitudeHistory = [];
     this.jogDetected = false;
     this.jogIntensity = 0;
+    this.jogCooldown = 0;
 
     // Timing
     this.lastProcessTime = 0;
@@ -113,6 +114,7 @@ export class SensorInput {
     // Cooldowns
     if (this.jumpCooldown > 0) this.jumpCooldown--;
     if (this.squatCooldown > 0) this.squatCooldown--;
+    if (this.jogCooldown > 0) this.jogCooldown--;
 
     const yDelta = this.smoothY - this.baselineY;
     const magDeviation = Math.abs(magnitude - this.baselineMagnitude);
@@ -129,6 +131,7 @@ export class SensorInput {
     if (magDeviation > 25 && this.jumpCooldown === 0 && !this.isJumping) {
       this.isJumping = true;
       this.jumpCooldown = 25; // ~830ms at 30Hz
+      this.jogCooldown = 45; // ~1.5s blocks landing impact from triggering sprint
       this.jumpCount++;
     } else if (magDeviation < 10) {
       this.isJumping = false;
@@ -139,9 +142,11 @@ export class SensorInput {
     if (yDelta < -8 && this.squatCooldown === 0 && !this.isSquatting && magDeviation < 20) {
       this.isSquatting = true;
       this.squatCooldown = 20;
+      this.jogCooldown = 30; // 1s block
       this.squatCount++;
-    } else if (yDelta >= -3) {
+    } else if (yDelta >= -3 && this.isSquatting) {
       this.isSquatting = false;
+      this.jogCooldown = 30; // 1s block after standing up to ignore the upward motion
     }
 
     // ===== JOG DETECTION =====
@@ -149,18 +154,23 @@ export class SensorInput {
     this.magnitudeHistory.push(magnitude);
     if (this.magnitudeHistory.length > 20) this.magnitudeHistory.shift();
 
-    if (this.magnitudeHistory.length >= 10 && !this.isJumping && !this.isSquatting) {
+    if (this.magnitudeHistory.length >= 10 && !this.isJumping && !this.isSquatting && this.jogCooldown === 0) {
       const recentMags = this.magnitudeHistory.slice(-10);
       const variance = this._variance(recentMags);
+      const zeroCrossings = this._countZeroCrossings(recentMags);
 
-      // Variance threshold: running with phone creates massive variance
-      // Increased heavily so normal hand movement doesn't trigger jogging
-      const jogThreshold = 50.0;
+      // Lowered threshold back down so real jogging is detected
+      const jogThreshold = 15.0;
       
-      // Prevent landing impacts from triggering a jog
-      const hasExtremeSpike = recentMags.some(m => Math.abs(m - this.baselineMagnitude) > 20);
+      // A true jog is rhythmic (multiple direction changes).
+      // A jump wind-up is a single massive swing (0 or 1 zero crossing).
+      
+      // Also block jogging if we are clearly in the middle of a wind-up
+      // (e.g. dropping down rapidly for a squat, or lifting rapidly for a jump)
+      const isWindingUpSquat = yDelta < -5;
+      const isWindingUpJump = magDeviation > 15;
 
-      this.jogDetected = variance > jogThreshold && !hasExtremeSpike;
+      this.jogDetected = variance > jogThreshold && zeroCrossings >= 2 && !isWindingUpSquat && !isWindingUpJump;
       this.jogIntensity = this.jogDetected ? Math.min(1, variance / (jogThreshold * 2)) : 0;
     } else {
       this.jogDetected = false;
@@ -173,6 +183,17 @@ export class SensorInput {
   _variance(values) {
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     return values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
+  }
+
+  _countZeroCrossings(values) {
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    let count = 0;
+    for (let i = 1; i < values.length; i++) {
+      if ((values[i] - mean) * (values[i-1] - mean) < 0) {
+        count++;
+      }
+    }
+    return count;
   }
 
   getGestureState() {
@@ -206,6 +227,7 @@ export class SensorInput {
     this.magnitudeHistory = [];
     this.jogDetected = false;
     this.jogIntensity = 0;
+    this.jogCooldown = 0;
   }
 
   stop() {
