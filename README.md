@@ -4,6 +4,8 @@ Welcome to **Samurai Sprint**—an endless runner game where **YOU** are the con
 
 Instead of sitting on the couch pressing buttons, this game requires you to physically move your body to control the samurai on screen. Jump over lanterns, duck under Torii gates, and jog in place to build up your sprint speed. It's the perfect way to get a quick cardio workout while having fun!
 
+![Samurai Sprint Gameplay](https://imgh.in/host/cale3q)
+
 > ⭐️ **If you enjoy this project, please consider leaving a star!** I am actively working on it and will keep pushing updates to make it even better.
 
 ## ✨ Features
