@@ -114,10 +114,11 @@ export class Game {
     let dt = timestamp - this.lastTime;
     this.lastTime = timestamp;
 
+    // Cap dt to prevent spiral of death on tab switch
     if (dt > 100) dt = 100;
 
     this.accumulator = (this.accumulator || 0) + dt;
-    const timeStep = 1000 / 60;
+    const timeStep = 1000 / 60; // Fixed 60 FPS physics
 
     while (this.accumulator >= timeStep) {
       this._update(timeStep);

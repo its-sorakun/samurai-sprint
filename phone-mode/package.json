@@ -1,0 +1,14 @@
+{
+  "name": "samurai-sprint-phone",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "selfsigned": "^5.5.0",
+    "ws": "^8.18.0"
+  }
+}

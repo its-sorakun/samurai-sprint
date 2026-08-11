@@ -3,33 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Samurai Sprint - A browser fitness game where your real movements control the character. Jump, squat, and jog to survive!" />
-    <title>Samurai Sprint — Fitness Runner</title>
+    <meta name="description" content="Samurai Sprint — Phone Controller Mode. Use your phone as a motion controller!" />
+    <title>Samurai Sprint — Phone Mode</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛩️</text></svg>" />
-    <!-- TensorFlow.js + MoveNet via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+    <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <!-- Hidden video element for webcam -->
-    <video id="webcam" autoplay playsinline muted style="display:none;"></video>
-
     <!-- Start Screen -->
     <div id="start-screen" class="screen active">
       <div class="start-content">
         <div class="title-group">
           <span class="title-kanji">侍疾走</span>
           <h1 class="title-english">Samurai Sprint</h1>
-          <p class="subtitle">Move your body. Control the game.</p>
+          <p class="subtitle">Phone Controller Mode</p>
         </div>
-        <div class="camera-preview-container" id="camera-preview-container" style="display:none;">
-          <canvas id="camera-preview-canvas" width="320" height="240"></canvas>
-          <div class="camera-status" id="camera-status">Initializing pose detection...</div>
+
+        <div class="connection-card" id="connection-card">
+          <div class="connection-status">
+            <span class="conn-dot" id="conn-dot"></span>
+            <span id="conn-text">Waiting for phone controller...</span>
+          </div>
+          <div class="connection-url" id="connection-url"></div>
+          <p class="connection-hint">Open this URL on your phone (same WiFi network)</p>
         </div>
+
         <div class="instructions">
+          <div class="instruction-item">
+            <span class="instruction-icon">📱</span>
+            <span>Hold phone in hand while playing</span>
+          </div>
           <div class="instruction-item">
             <span class="instruction-icon">🦘</span>
             <span>Jump to leap over obstacles</span>
@@ -40,14 +45,15 @@
           </div>
           <div class="instruction-item">
             <span class="instruction-icon">🏃</span>
-            <span>Jog in place for a speed boost</span>
+            <span>Jog in place for speed boost</span>
           </div>
         </div>
-        <button id="btn-start" class="btn-primary">
-          <span class="btn-icon">📷</span>
-          Enable Camera & Play
+
+        <button id="btn-start" class="btn-primary" disabled>
+          <span class="btn-icon">⛩️</span>
+          Waiting for controller...
         </button>
-        <p class="privacy-note">Your camera feed stays 100% on your device. Nothing is uploaded.</p>
+        <p class="privacy-note">No camera needed. Your phone sensors stay on your device.</p>
       </div>
     </div>
 
@@ -69,8 +75,9 @@
           <span class="action-indicator" id="action-indicator">🏃 Running</span>
         </div>
       </div>
-      <div id="pip-container">
-        <canvas id="pip-canvas" width="200" height="150"></canvas>
+      <div id="phone-status" class="phone-status-hud">
+        <span class="conn-dot-small" id="game-conn-dot"></span>
+        <span id="game-conn-text">📱 Connected</span>
       </div>
     </div>
 
@@ -110,6 +117,6 @@
       </div>
     </div>
 
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/main.js"></script>
   </body>
 </html>

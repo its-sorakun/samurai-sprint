@@ -53,7 +53,7 @@ export class PoseDetector {
 
     // Smoothing
     this.smoothedHipY = null;
-    this.smoothingFactor = 0.3;
+    this.smoothingFactor = 0.15; // heavy smoothing to filter MoveNet jitter
   }
 
   async initialize(videoElement) {
@@ -126,10 +126,10 @@ export class PoseDetector {
       this.smoothedHipY = this.smoothedHipY * (1 - this.smoothingFactor) + hipY * this.smoothingFactor;
     }
 
-    // Calibration: collect first 30 frames to establish baseline
+    // Calibration: collect first 45 frames to establish baseline
     if (!this.calibrated) {
       this.calibrationFrames.push(this.smoothedHipY);
-      if (this.calibrationFrames.length >= 30) {
+      if (this.calibrationFrames.length >= 45) {
         // Use median for robustness
         const sorted = [...this.calibrationFrames].sort((a, b) => a - b);
         this.baselineHipY = sorted[Math.floor(sorted.length / 2)];
@@ -148,25 +148,47 @@ export class PoseDetector {
     // Squat: hips go DOWN in real world = Y increases in video
 
     const videoHeight = this.videoElement.videoHeight || 480;
-    const jumpThreshold = -videoHeight * 0.05;   // 5% of frame height upward
-    const squatThreshold = videoHeight * 0.08;     // 8% of frame height downward
+    const jumpThreshold = -videoHeight * 0.10;    // 10% of frame height upward
+    const squatThreshold = videoHeight * 0.05;     // 5% of frame height downward (easier to trigger)
 
-    // Jump detection
-    if (hipDelta < jumpThreshold && this.jumpCooldown === 0 && !this.isJumping) {
-      this.isJumping = true;
-      this.jumpCooldown = 20; // ~20 frames cooldown
-      this.jumpCount++;
-    } else if (hipDelta >= jumpThreshold * 0.5) {
-      this.isJumping = false;
+    // Adaptive baseline: slowly drift toward current position when idle
+    // This prevents the baseline from going stale and causing false triggers
+    const isIdle = Math.abs(hipDelta) < Math.abs(jumpThreshold * 0.3);
+    if (isIdle && this.jumpCooldown === 0 && this.squatCooldown === 0) {
+      this.baselineHipY = this.baselineHipY * 0.995 + this.smoothedHipY * 0.005;
     }
 
-    // Squat detection
+    // Jump detection — require 5 consecutive frames above threshold
+    if (hipDelta < jumpThreshold && this.jumpCooldown === 0 && !this.isJumping) {
+      this.jumpConfirmFrames = (this.jumpConfirmFrames || 0) + 1;
+      if (this.jumpConfirmFrames >= 5) {
+        this.isJumping = true;
+        this.jumpCooldown = 40;
+        this.jumpCount++;
+        this.jumpConfirmFrames = 0;
+      }
+    } else if (hipDelta >= -Math.abs(jumpThreshold * 0.2)) {
+      // Must return close to baseline before another jump
+      this.isJumping = false;
+      this.jumpConfirmFrames = 0;
+    } else {
+      this.jumpConfirmFrames = 0;
+    }
+
+    // Squat detection — also require confirmation frames
     if (hipDelta > squatThreshold && this.squatCooldown === 0 && !this.isSquatting) {
-      this.isSquatting = true;
-      this.squatCooldown = 20;
-      this.squatCount++;
-    } else if (hipDelta <= squatThreshold * 0.5) {
+      this.squatConfirmFrames = (this.squatConfirmFrames || 0) + 1;
+      if (this.squatConfirmFrames >= 4) {
+        this.isSquatting = true;
+        this.squatCooldown = 30;
+        this.squatCount++;
+        this.squatConfirmFrames = 0;
+      }
+    } else if (hipDelta <= squatThreshold * 0.3) {
       this.isSquatting = false;
+      this.squatConfirmFrames = 0;
+    } else {
+      this.squatConfirmFrames = 0;
     }
 
     // Jog detection — track knee Y oscillation
@@ -177,6 +199,7 @@ export class PoseDetector {
     const leftKneeY = this._getKeypointY(KEYPOINTS.LEFT_KNEE);
     const rightKneeY = this._getKeypointY(KEYPOINTS.RIGHT_KNEE);
 
+    // Only use knees (ankles are often occluded/noisy when standing still)
     if (leftKneeY !== null) {
       this.leftKneeHistory.push(leftKneeY);
       if (this.leftKneeHistory.length > 20) this.leftKneeHistory.shift();
@@ -186,18 +209,27 @@ export class PoseDetector {
       if (this.rightKneeHistory.length > 20) this.rightKneeHistory.shift();
     }
 
-    if (this.leftKneeHistory.length < 10 || this.rightKneeHistory.length < 10) return;
+    if (this.leftKneeHistory.length < 12 || this.rightKneeHistory.length < 12) return;
+
+    // Suppress jog detection during jumps/squats to prevent false sprints
+    // Note: We don't use isIdle here because jogging naturally bounces the hips a bit!
+    if (this.isJumping || this.isSquatting) {
+      this.jogDetected = false;
+      this.jogIntensity = 0;
+      return;
+    }
 
     // Calculate variance in knee positions (higher variance = more movement)
-    const leftVariance = this._variance(this.leftKneeHistory.slice(-10));
-    const rightVariance = this._variance(this.rightKneeHistory.slice(-10));
+    const leftVariance = this._variance(this.leftKneeHistory.slice(-12));
+    const rightVariance = this._variance(this.rightKneeHistory.slice(-12));
     const avgVariance = (leftVariance + rightVariance) / 2;
 
     const videoHeight = this.videoElement.videoHeight || 480;
-    const jogThreshold = (videoHeight * 0.015) ** 2; // variance threshold
+    // Threshold: At 480p, this is (480 * 0.015)^2 = ~51 — requires ~7px of knee oscillation
+    const jogThreshold = (videoHeight * 0.015) ** 2;
 
     this.jogDetected = avgVariance > jogThreshold;
-    this.jogIntensity = Math.min(1, avgVariance / (jogThreshold * 5));
+    this.jogIntensity = Math.min(1, avgVariance / (jogThreshold * 3));
   }
 
   _variance(values) {

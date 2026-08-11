@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Samurai Sprint — Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>" />
+  <style>
+    :root {
+      --bg-deep: #0a0a12;
+      --gold-accent: #d4a854;
+      --gold-bright: #f0d48a;
+      --sakura-pink: #f4a7bb;
+      --torii-red: #c33c3c;
+      --bamboo-green: #5a8a5e;
+      --text-primary: #f0ebe3;
+      --text-secondary: #a8a3b8;
+      --text-muted: #6b6785;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 24px;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .title-kanji {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--gold-accent), var(--gold-bright));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.05em; }
+    .subtitle { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .status-card {
+      background: rgba(20, 20, 35, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 20px 28px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .status-dot.disconnected { background: var(--torii-red); }
+    .status-dot.connecting { background: var(--gold-accent); animation: pulse 1s infinite; }
+    .status-dot.connected { background: var(--bamboo-green); }
+    .status-dot.active { background: var(--sakura-pink); animation: pulse 0.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #status-text { font-size: 0.95rem; font-weight: 600; }
+
+    .sensor-display {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .sensor-value {
+      text-align: center;
+    }
+    .sensor-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .sensor-num {
+      font-size: 1.4rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .action-display {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+    .action-display.idle {
+      background: rgba(255,255,255,0.03);
+      color: var(--text-muted);
+    }
+    .action-display.jump {
+      background: rgba(90, 138, 94, 0.2);
+      color: var(--bamboo-green);
+    }
+    .action-display.squat {
+      background: rgba(212, 168, 84, 0.2);
+      color: var(--gold-accent);
+    }
+    .action-display.jog {
+      background: rgba(244, 167, 187, 0.2);
+      color: var(--sakura-pink);
+    }
+
+    .btn-start {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 32px;
+      font-size: 1.1rem; font-weight: 700; font-family: 'Outfit', sans-serif;
+      color: var(--bg-deep);
+      background: linear-gradient(135deg, var(--gold-accent), var(--gold-bright));
+      border: none; border-radius: 999px; cursor: pointer;
+      box-shadow: 0 4px 24px rgba(212, 168, 84, 0.3);
+      transition: transform 0.15s, box-shadow 0.3s;
+      width: 100%; max-width: 320px;
+    }
+    .btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(212, 168, 84, 0.5); }
+    .btn-start:active { transform: scale(0.97); }
+    .btn-start:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .note { font-size: 0.7rem; color: var(--text-muted); max-width: 280px; }
+
+    .instructions {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; max-width: 320px;
+    }
+    .instruction-item {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(20, 20, 35, 0.6);
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 0.8rem; color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div>
+      <span class="title-kanji">侍疾走</span>
+      <h1>Controller</h1>
+      <p class="subtitle">Hold your phone while you move</p>
+    </div>
+
+    <div class="status-card">
+      <div>
+        <span class="status-dot disconnected" id="status-dot"></span>
+        <span id="status-text">Not connected</span>
+      </div>
+
+      <div class="sensor-display" id="sensor-display" style="display:none;">
+        <div class="sensor-value">
+          <div class="sensor-label">X</div>
+          <div class="sensor-num" id="ax">0.0</div>
+        </div>
+        <div class="sensor-value">
+          <div class="sensor-label">Y</div>
+          <div class="sensor-num" id="ay">0.0</div>
+        </div>
+        <div class="sensor-value">
+          <div class="sensor-label">Z</div>
+          <div class="sensor-num" id="az">0.0</div>
+        </div>
+      </div>
+
+      <div class="action-display idle" id="action-display">
+        Standing
+      </div>
+    </div>
+
+    <button class="btn-start" id="btn-connect">
+      📡 Connect & Start Sensors
+    </button>
+
+    <div class="instructions">
+      <div class="instruction-item">🦘 Jump in real life to jump in game</div>
+      <div class="instruction-item">🧎 Squat to duck under obstacles</div>
+      <div class="instruction-item">🏃 Jog in place for speed boost</div>
+    </div>
+
+    <p class="note">Keep your phone in your hand or pocket. Both devices must be on the same WiFi.</p>
+  </div>
+
+  <script>
+    const btnConnect = document.getElementById('btn-connect');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const sensorDisplay = document.getElementById('sensor-display');
+    const actionDisplay = document.getElementById('action-display');
+    const axEl = document.getElementById('ax');
+    const ayEl = document.getElementById('ay');
+    const azEl = document.getElementById('az');
+
+    let ws = null;
+    let sendInterval = null;
+    let latestMotion = { x: 0, y: 0, z: 0, timestamp: 0 };
+
+    function setStatus(state, text) {
+      statusDot.className = 'status-dot ' + state;
+      statusText.textContent = text;
+    }
+
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/?role=controller`;
+
+      setStatus('connecting', 'Connecting...');
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setStatus('connected', 'Connected to game!');
+        sensorDisplay.style.display = 'grid';
+        startSensors();
+      };
+
+      ws.onclose = () => {
+        setStatus('disconnected', 'Disconnected');
+        stopSensors();
+      };
+
+      ws.onerror = () => {
+        setStatus('disconnected', 'Connection error');
+      };
+    }
+
+    function startSensors() {
+      // Request permission (required on iOS, some Android browsers)
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(state => {
+            if (state === 'granted') {
+              attachMotionListener();
+            } else {
+              setStatus('disconnected', 'Sensor permission denied');
+            }
+          })
+          .catch(() => {
+            setStatus('disconnected', 'Sensor permission error');
+          });
+      } else {
+        attachMotionListener();
+      }
+    }
+
+    function attachMotionListener() {
+      window.addEventListener('devicemotion', onDeviceMotion);
+
+      // Send data at ~30Hz (every 33ms) to avoid flooding
+      sendInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'motion',
+            x: latestMotion.x,
+            y: latestMotion.y,
+            z: latestMotion.z,
+            t: Date.now()
+          }));
+        }
+      }, 33);
+
+      setStatus('active', 'Streaming sensor data');
+      btnConnect.disabled = true;
+      btnConnect.textContent = '✅ Sensors active';
+    }
+
+    function onDeviceMotion(event) {
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+
+      latestMotion.x = acc.x || 0;
+      latestMotion.y = acc.y || 0;
+      latestMotion.z = acc.z || 0;
+      latestMotion.timestamp = Date.now();
+
+      // Update display
+      axEl.textContent = latestMotion.x.toFixed(1);
+      ayEl.textContent = latestMotion.y.toFixed(1);
+      azEl.textContent = latestMotion.z.toFixed(1);
+
+      // Visual feedback for detected motion
+      const totalAccel = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
+      // Gravity is ~9.8, so deviation from that indicates movement
+      const deviation = Math.abs(totalAccel - 9.8);
+
+      if (deviation > 25) {
+        actionDisplay.className = 'action-display jump';
+        actionDisplay.textContent = '🦘 Jump!';
+      } else if (acc.y < 1.5 && deviation < 15) {
+        actionDisplay.className = 'action-display squat';
+        actionDisplay.textContent = '🧎 Squat!';
+      } else if (deviation > 15) {
+        actionDisplay.className = 'action-display jog';
+        actionDisplay.textContent = '🏃 Moving!';
+      } else {
+        actionDisplay.className = 'action-display idle';
+        actionDisplay.textContent = 'Standing';
+      }
+    }
+
+    function stopSensors() {
+      window.removeEventListener('devicemotion', onDeviceMotion);
+      if (sendInterval) {
+        clearInterval(sendInterval);
+        sendInterval = null;
+      }
+      btnConnect.disabled = false;
+      btnConnect.textContent = '📡 Connect & Start Sensors';
+    }
+
+    btnConnect.addEventListener('click', () => {
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>

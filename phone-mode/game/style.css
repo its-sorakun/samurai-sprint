@@ -161,31 +161,88 @@ html, body {
   letter-spacing: 0.1em;
 }
 
-/* Camera Preview */
-.camera-preview-container {
-  position: relative;
+/* Connection Card (Phone Mode) */
+.connection-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 2px solid rgba(212, 168, 84, 0.3);
-  box-shadow: 0 0 30px rgba(212, 168, 84, 0.1);
-}
-
-.camera-preview-container canvas {
-  display: block;
-  border-radius: var(--radius-md);
-}
-
-.camera-status {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(10, 10, 18, 0.8);
-  backdrop-filter: blur(8px);
-  color: var(--gold-accent);
-  font-size: 0.8rem;
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-lg);
+  width: 100%;
   text-align: center;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  font-weight: 600;
+}
+
+.conn-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.conn-dot.disconnected { background: var(--torii-red); }
+.conn-dot.connected { background: var(--bamboo-green); }
+
+.conn-dot-small {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.conn-dot-small.disconnected { background: var(--torii-red); }
+.conn-dot-small.connected { background: var(--bamboo-green); }
+
+.connection-url {
+  font-family: monospace;
+  font-size: 1.05rem;
+  color: var(--gold-accent);
+  background: rgba(212, 168, 84, 0.08);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(212, 168, 84, 0.2);
+  word-break: break-all;
+  user-select: all;
+  margin-bottom: var(--space-sm);
+}
+
+.connection-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.phone-status-hud {
+  position: absolute;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  z-index: 20;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-primary:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Instructions */

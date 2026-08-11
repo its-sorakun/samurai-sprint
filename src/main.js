@@ -13,6 +13,7 @@ const gameScreen = document.getElementById('game-screen');
 const gameoverScreen = document.getElementById('gameover-screen');
 const btnStart = document.getElementById('btn-start');
 const btnRestart = document.getElementById('btn-restart');
+const btnHome = document.getElementById('btn-home');
 const webcamVideo = document.getElementById('webcam');
 const cameraPreviewContainer = document.getElementById('camera-preview-container');
 const cameraPreviewCanvas = document.getElementById('camera-preview-canvas');
@@ -240,6 +241,39 @@ btnRestart.addEventListener('click', () => {
     game.destroy();
   }
   startGame();
+});
+
+btnHome.addEventListener('click', () => {
+  if (game) {
+    game.destroy();
+    game = null;
+  }
+  if (poseLoopId) {
+    cancelAnimationFrame(poseLoopId);
+    poseLoopId = null;
+  }
+  if (hudLoopId) {
+    cancelAnimationFrame(hudLoopId);
+    hudLoopId = null;
+  }
+  if (poseDetector) {
+    poseDetector.stop();
+    poseDetector = null;
+  }
+  
+  // Stop webcam
+  if (webcamVideo.srcObject) {
+    webcamVideo.srcObject.getTracks().forEach(track => track.stop());
+    webcamVideo.srcObject = null;
+  }
+
+  // Reset UI
+  cameraPreviewContainer.style.display = 'none';
+  cameraStatus.textContent = 'Initializing pose detection...';
+  btnStart.disabled = false;
+  btnStart.childNodes[2].textContent = ' Enable Camera & Play';
+  
+  showScreen(startScreen);
 });
 
 // Keyboard fallback (for testing without camera)
