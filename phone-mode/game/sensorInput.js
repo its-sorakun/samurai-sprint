@@ -156,8 +156,12 @@ export class SensorInput {
       // Variance threshold: running with phone creates massive variance
       // Increased heavily so normal hand movement doesn't trigger jogging
       const jogThreshold = 50.0;
-      this.jogDetected = variance > jogThreshold;
-      this.jogIntensity = Math.min(1, variance / (jogThreshold * 2));
+      
+      // Prevent landing impacts from triggering a jog
+      const hasExtremeSpike = recentMags.some(m => Math.abs(m - this.baselineMagnitude) > 20);
+
+      this.jogDetected = variance > jogThreshold && !hasExtremeSpike;
+      this.jogIntensity = this.jogDetected ? Math.min(1, variance / (jogThreshold * 2)) : 0;
     } else {
       this.jogDetected = false;
       this.jogIntensity = Math.max(0, this.jogIntensity - 0.05);
