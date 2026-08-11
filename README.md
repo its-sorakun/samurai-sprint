@@ -4,6 +4,8 @@ Welcome to **Samurai Sprint**—an endless runner game where **YOU** are the con
 
 Instead of sitting on the couch pressing buttons, this game requires you to physically move your body to control the samurai on screen. Jump over lanterns, duck under Torii gates, and jog in place to build up your sprint speed. It's the perfect way to get a quick cardio workout while having fun!
 
+> ⭐️ **If you enjoy this project, please consider leaving a star!** I am actively working on it and will keep pushing updates to make it even better.
+
 ## ✨ Features
 
 - **Full Body Controls:** Jump, squat, and jog in the real world to control your character. All physics run in a custom HTML5 Canvas game loop locked at a fixed 60 FPS for consistent gameplay regardless of monitor refresh rate.
@@ -49,6 +51,18 @@ The controls are simple, but the workout is real!
 7. Open your phone's browser and navigate to the **ngrok HTTPS URL** (appended with `/controller`). 
 8. Tap "Connect & Start Sensors" on your phone, and you are ready to play!
 
+## 🚧 Current Limitations & Known Challenges
+
+This project is highly experimental and relies on bleeding-edge browser APIs. Here are some of the current hurdles being worked on:
+
+**Phone Controller Mode:**
+- **HTTPS Tunneling Dependency:** Modern mobile browsers strictly require a secure `HTTPS` context to access the `DeviceMotion` API. Because of this, running the server on `localhost` isn't enough; you currently have to use `ngrok` (or similar tunneling software) to route your phone traffic securely to your PC. 
+- **Jogging Detection:** While jumps and squats are accurately filtered, parsing the chaotic 3-axis accelerometer data of a "jogging in place" motion is incredibly tricky. The physics filter sometimes struggles to differentiate a slow jog from standing idle, or a highly aggressive sprint from a jumping shockwave.
+
+**AI Webcam Mode:**
+- **Environmental Dependency:** AI pose detection is heavily reliant on good lighting and clear contrast between you and your background.
+- **Hardware Intensive:** Running TensorFlow.js real-time inference at 30+ FPS in the browser requires a fairly decent CPU/GPU.
+
 ## 🛠️ Built With
 
 - **HTML5 Canvas:** For rendering the game world and pixel-art aesthetics.
@@ -57,4 +71,4 @@ The controls are simple, but the workout is real!
 - **DeviceMotion API:** To capture high-fidelity accelerometer data from the smartphone.
 
 ---
-*Get ready to sweat!* 💦
+Have fun, and enjoy the workout! 🏃‍♂️💨
