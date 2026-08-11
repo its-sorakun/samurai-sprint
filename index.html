@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Samurai Sprint - A browser fitness game where your real movements control the character. Jump, squat, and jog to survive!" />
+    <title>Samurai Sprint — Fitness Runner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛩️</text></svg>" />
+    <!-- TensorFlow.js + MoveNet via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+  </head>
+  <body>
+    <!-- Hidden video element for webcam -->
+    <video id="webcam" autoplay playsinline muted style="display:none;"></video>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen active">
+      <div class="start-content">
+        <div class="title-group">
+          <span class="title-kanji">侍疾走</span>
+          <h1 class="title-english">Samurai Sprint</h1>
+          <p class="subtitle">Move your body. Control the game.</p>
+        </div>
+        <div class="camera-preview-container" id="camera-preview-container" style="display:none;">
+          <canvas id="camera-preview-canvas" width="320" height="240"></canvas>
+          <div class="camera-status" id="camera-status">Initializing pose detection...</div>
+        </div>
+        <div class="instructions">
+          <div class="instruction-item">
+            <span class="instruction-icon">🦘</span>
+            <span>Jump to leap over obstacles</span>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-icon">🧎</span>
+            <span>Squat to duck under barriers</span>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-icon">🏃</span>
+            <span>Jog in place for a speed boost</span>
+          </div>
+        </div>
+        <button id="btn-start" class="btn-primary">
+          <span class="btn-icon">📷</span>
+          Enable Camera & Play
+        </button>
+        <p class="privacy-note">Your camera feed stays 100% on your device. Nothing is uploaded.</p>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+      <canvas id="game-canvas"></canvas>
+      <div id="hud">
+        <div class="hud-item" id="hud-score">
+          <span class="hud-label">距離</span>
+          <span class="hud-value" id="score-value">0</span>
+        </div>
+        <div class="hud-item" id="hud-speed">
+          <span class="hud-label">速度</span>
+          <div class="speed-bar">
+            <div class="speed-bar-fill" id="speed-bar-fill"></div>
+          </div>
+        </div>
+        <div class="hud-item" id="hud-action">
+          <span class="action-indicator" id="action-indicator">🏃 Running</span>
+        </div>
+      </div>
+      <div id="pip-container">
+        <canvas id="pip-canvas" width="200" height="150"></canvas>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="screen">
+      <div class="gameover-content">
+        <span class="gameover-kanji">終</span>
+        <h2 class="gameover-title">Game Over</h2>
+        <div class="final-score-container">
+          <span class="final-score-label">Final Distance</span>
+          <span class="final-score-value" id="final-score">0</span>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-value" id="stat-jumps">0</span>
+            <span class="stat-label">Jumps</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="stat-squats">0</span>
+            <span class="stat-label">Squats</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="stat-time">0s</span>
+            <span class="stat-label">Time</span>
+          </div>
+        </div>
+        <button id="btn-restart" class="btn-primary">
+          <span class="btn-icon">🔄</span>
+          Try Again
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
