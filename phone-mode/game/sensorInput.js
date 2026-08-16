@@ -38,11 +38,17 @@ export class SensorInput {
     this.squatFrames = 0;
     this.squatCount = 0;
 
-    // Jog detection
-    this.magnitudeHistory = [];
+    // Jog detection — Peak detection pedometer + step cadence
+    this.jogPeakThreshold = 3.0;      // Min raw deviation to count as a step peak (3.0g is an easy jog)
+    this.jogAboveThreshold = false;   // Tracks rising-edge crossing
+    this.jogLastStepTime = 0;         // Timestamp of last detected step
+    this.jogRefractoryMs = 250;       // Minimum ms between steps (max 4 steps/sec)
+    this.jogStepTimestamps = [];      // Rolling window of recent step timestamps
+    this.jogCadenceWindowMs = 2500;   // How far back to look for steps (2.5 seconds)
+    this.jogMinCadence = 3;           // Min steps in the window to consider it jogging
     this.jogDetected = false;
     this.jogIntensity = 0;
-    this.jogCooldown = 0;
+    this.jogCooldown = 0;             // Frames to suppress jog after jump/squat
 
     // Timing
     this.lastProcessTime = 0;
@@ -140,7 +146,7 @@ export class SensorInput {
     if (this.jumpFrames >= 3 && this.jumpCooldown === 0 && !this.isJumping) {
       this.isJumping = true;
       this.jumpCooldown = 25; // ~830ms at 30Hz
-      this.jogCooldown = 45; // ~1.5s blocks landing impact from triggering sprint
+      this.jogCooldown = 15; // ~500ms — EMA filter handles most noise, just need a brief settle period
       this.jumpCount++;
     } else if (magDeviation < 10) {
       this.isJumping = false;
@@ -157,58 +163,55 @@ export class SensorInput {
     if (this.squatFrames >= 3 && this.squatCooldown === 0 && !this.isSquatting && magDeviation < 20) {
       this.isSquatting = true;
       this.squatCooldown = 20;
-      this.jogCooldown = 30; // 1s block
+      this.jogCooldown = 10; // ~330ms settle period
       this.squatCount++;
     } else if (yDelta >= -3 && this.isSquatting) {
       this.isSquatting = false;
-      this.jogCooldown = 30; // 1s block after standing up to ignore the upward motion
+      this.jogCooldown = 10; // ~330ms settle after standing up
     }
 
-    // ===== JOG DETECTION =====
-    // Jogging in place creates rhythmic oscillation in acceleration magnitude
-    this.magnitudeHistory.push(magnitude);
-    if (this.magnitudeHistory.length > 20) this.magnitudeHistory.shift();
+    // ===== JOG DETECTION (Raw Peak Detection Pedometer) =====
+    // We do NOT use the EMA filter here because human acceleration oscillates
+    // symmetrically around gravity. A strong low-pass filter was flattening the
+    // signal toward 9.8, preventing peak detection entirely!
+    // Instead, we use `magDeviation` (absolute deviation from gravity) directly.
+    
+    // Step 1: Peak detection with rising-edge trigger and refractory period.
+    // A step is counted once when the deviation first crosses above the threshold.
+    // It cannot count again until the signal drops back below AND the refractory period elapses.
+    // The refractory period naturally prevents double-counting from noisy signals.
+    if (!this.isJumping && !this.isSquatting && this.jogCooldown === 0) {
+      if (magDeviation > this.jogPeakThreshold && !this.jogAboveThreshold) {
+        // Rising edge — signal just crossed the threshold
+        if (now - this.jogLastStepTime > this.jogRefractoryMs) {
+          this.jogStepTimestamps.push(now);
+          this.jogLastStepTime = now;
+        }
+        this.jogAboveThreshold = true;
+      } else if (magDeviation < this.jogPeakThreshold * 0.5) {
+        // Signal dropped back below half the threshold (hysteresis band to avoid flicker)
+        this.jogAboveThreshold = false;
+      }
+    }
 
-    if (this.magnitudeHistory.length >= 10 && !this.isJumping && !this.isSquatting && this.jogCooldown === 0) {
-      const recentMags = this.magnitudeHistory.slice(-10);
-      const variance = this._variance(recentMags);
-      const zeroCrossings = this._countZeroCrossings(recentMags);
+    // Step 4: Prune old timestamps outside the cadence window
+    const windowStart = now - this.jogCadenceWindowMs;
+    this.jogStepTimestamps = this.jogStepTimestamps.filter(t => t > windowStart);
 
-      // Lowered threshold back down so real jogging is detected
-      const jogThreshold = 15.0;
-      
-      // A true jog is rhythmic (multiple direction changes).
-      // A jump wind-up is a single massive swing (0 or 1 zero crossing).
-      
-      // Also block jogging if we are clearly in the middle of a wind-up
-      // (e.g. dropping down rapidly for a squat, or lifting rapidly for a jump)
-      const isWindingUpSquat = yDelta < -5;
-      const isWindingUpJump = magDeviation > 15;
-
-      this.jogDetected = variance > jogThreshold && zeroCrossings >= 2 && !isWindingUpSquat && !isWindingUpJump;
-      this.jogIntensity = this.jogDetected ? Math.min(1, variance / (jogThreshold * 2)) : 0;
+    // Step 5: Determine jog state from step cadence
+    const recentSteps = this.jogStepTimestamps.length;
+    if (recentSteps >= this.jogMinCadence && !this.isJumping && !this.isSquatting && this.jogCooldown === 0) {
+      this.jogDetected = true;
+      // Intensity scales from 0 to 1 based on how many steps above the minimum
+      // At minCadence steps it's 0.3, at 2x minCadence it's 1.0
+      this.jogIntensity = Math.min(1, 0.3 + (recentSteps - this.jogMinCadence) / this.jogMinCadence * 0.7);
     } else {
       this.jogDetected = false;
-      this.jogIntensity = Math.max(0, this.jogIntensity - 0.05);
+      // Smooth decay so the character doesn't jerk to a stop
+      this.jogIntensity = Math.max(0, this.jogIntensity - 0.03);
     }
 
     this.lastProcessTime = now;
-  }
-
-  _variance(values) {
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    return values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
-  }
-
-  _countZeroCrossings(values) {
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    let count = 0;
-    for (let i = 1; i < values.length; i++) {
-      if ((values[i] - mean) * (values[i-1] - mean) < 0) {
-        count++;
-      }
-    }
-    return count;
   }
 
   getGestureState() {
@@ -245,7 +248,9 @@ export class SensorInput {
     this.isSquatting = false;
     this.jumpCooldown = 0;
     this.squatCooldown = 0;
-    this.magnitudeHistory = [];
+    this.jogAboveThreshold = false;
+    this.jogLastStepTime = 0;
+    this.jogStepTimestamps = [];
     this.jogDetected = false;
     this.jogIntensity = 0;
     this.jogCooldown = 0;

@@ -319,6 +319,9 @@ export class Game {
         this.workoutAction = 'REST';
         this.workoutTimer = 10000; // Increased from 5s to 10s
         
+        // Immediately clear any leftover obstacles from the screen
+        this.obstacleManager.reset();
+        
         if (this.audioEngine) this.audioEngine.playBeep(false); // Low beep to stop
       }
     }

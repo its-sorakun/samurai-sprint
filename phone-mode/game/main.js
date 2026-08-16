@@ -23,9 +23,11 @@ const connText = document.getElementById('conn-text');
 const connectionUrl = document.getElementById('connection-url');
 const gameCanvas = document.getElementById('game-canvas');
 const scoreValue = document.getElementById('score-value');
+const highScoreValue = document.getElementById('highscore-value');
 const speedBarFill = document.getElementById('speed-bar-fill');
 const actionIndicator = document.getElementById('action-indicator');
 const finalScore = document.getElementById('final-score');
+const finalHighScore = document.getElementById('final-highscore');
 const statJumps = document.getElementById('stat-jumps');
 const statSquats = document.getElementById('stat-squats');
 const statTime = document.getElementById('stat-time');
@@ -37,8 +39,18 @@ let sensorInput = null;
 let game = null;
 let audioEngine = new AudioEngine();
 let currentMode = 'endless';
+let currentHighScore = 0;
 let gestureLoopId = null;
 let hudLoopId = null;
+
+// High Score Helpers
+function getHighScore(mode) {
+  return parseInt(localStorage.getItem(`samuraiSprintHighScore_${mode}`) || '0', 10);
+}
+
+function setHighScore(mode, score) {
+  localStorage.setItem(`samuraiSprintHighScore_${mode}`, score);
+}
 
 // Show the controller URL
 const controllerUrl = `${location.protocol}//${location.hostname}:${location.port}/controller`;
@@ -119,7 +131,14 @@ function gestureLoop() {
 function updateHUD() {
   if (!game || game.state !== 'playing') return;
 
-  scoreValue.textContent = game.getScore();
+  const currentScore = game.getScore();
+  scoreValue.textContent = currentScore;
+  
+  if (currentScore > currentHighScore) {
+    currentHighScore = currentScore;
+  }
+  highScoreValue.textContent = currentHighScore;
+  
   speedBarFill.style.width = `${30 + game.getSpeedPercent() * 70}%`;
 
   const gestures = sensorInput ? sensorInput.getGestureState() : null;
@@ -149,6 +168,7 @@ function updateHUD() {
 // Start game
 function startGame(mode = 'endless') {
   currentMode = mode;
+  currentHighScore = getHighScore(mode);
   audioEngine.init(); // Requires user gesture to unlock AudioContext
 
   if (sensorInput) {
@@ -159,8 +179,13 @@ function startGame(mode = 'endless') {
   game = new Game(gameCanvas);
 
     game.onGameOver = (result) => {
+    if (result.score > getHighScore(currentMode)) {
+      setHighScore(currentMode, result.score);
+    }
+      
     audioEngine.playGameOver();
     finalScore.textContent = result.score;
+    finalHighScore.textContent = currentHighScore;
     document.getElementById('final-score-label').textContent = mode === 'workout' ? 'Workout Score' : 'Final Distance';
     const gestures = sensorInput ? sensorInput.getGestureState() : null;
     statJumps.textContent = gestures ? gestures.jumpCount : 0;
