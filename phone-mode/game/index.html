@@ -49,7 +49,15 @@
           </div>
         </div>
 
-        <button id="btn-start" class="btn-primary" disabled>
+        <div id="start-buttons" class="button-group" style="display: none; margin-top: 15px;">
+          <button id="btn-start-endless" class="btn-primary">
+            <span class="btn-icon">🏃</span> Endless Run
+          </button>
+          <button id="btn-start-workout" class="btn-secondary">
+            <span class="btn-icon">🏋️</span> Guided Workout
+          </button>
+        </div>
+        <button id="btn-waiting" class="btn-primary" disabled>
           <span class="btn-icon">⛩️</span>
           Waiting for controller...
         </button>
@@ -60,6 +68,13 @@
     <!-- Game Screen -->
     <div id="game-screen" class="screen">
       <canvas id="game-canvas"></canvas>
+      
+      <!-- Workout Overlay -->
+      <div id="workout-overlay" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; text-shadow: 0 4px 12px rgba(0,0,0,0.8); pointer-events: none; z-index: 10;">
+        <h1 id="workout-command" style="font-size: 5rem; font-weight: 900; margin: 0; text-transform: uppercase;">REST</h1>
+        <p id="workout-timer" style="font-size: 2.5rem; font-weight: 700; color: #f0d48a; margin: 0;">5</p>
+      </div>
+
       <div id="hud">
         <div class="hud-item" id="hud-score">
           <span class="hud-label">距離</span>
@@ -74,6 +89,9 @@
         <div class="hud-item" id="hud-action">
           <span class="action-indicator" id="action-indicator">🏃 Running</span>
         </div>
+        <button id="btn-end-game" class="btn-secondary" style="padding: 4px 12px; font-size: 0.9rem; margin-left: auto;">
+          <span class="btn-icon">🛑</span> End Game
+        </button>
       </div>
       <div id="phone-status" class="phone-status-hud">
         <span class="conn-dot-small" id="game-conn-dot"></span>
@@ -87,7 +105,7 @@
         <span class="gameover-kanji">終</span>
         <h2 class="gameover-title">Game Over</h2>
         <div class="final-score-container">
-          <span class="final-score-label">Final Distance</span>
+          <span class="final-score-label" id="final-score-label">Final Distance</span>
           <span class="final-score-value" id="final-score">0</span>
         </div>
         <div class="stats-row">

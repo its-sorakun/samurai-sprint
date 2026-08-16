@@ -5,12 +5,17 @@
 
 import { SensorInput } from './sensorInput.js';
 import { Game } from './game.js';
+import { AudioEngine } from './audio.js';
 
 // DOM Elements
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const gameoverScreen = document.getElementById('gameover-screen');
-const btnStart = document.getElementById('btn-start');
+const btnStartEndless = document.getElementById('btn-start-endless');
+const btnStartWorkout = document.getElementById('btn-start-workout');
+const btnWaiting = document.getElementById('btn-waiting');
+const startButtons = document.getElementById('start-buttons');
+const btnEndGame = document.getElementById('btn-end-game');
 const btnRestart = document.getElementById('btn-restart');
 const btnHome = document.getElementById('btn-home');
 const connDot = document.getElementById('conn-dot');
@@ -30,6 +35,8 @@ const gameConnText = document.getElementById('game-conn-text');
 // State
 let sensorInput = null;
 let game = null;
+let audioEngine = new AudioEngine();
+let currentMode = 'endless';
 let gestureLoopId = null;
 let hudLoopId = null;
 
@@ -55,9 +62,8 @@ function initSensorInput() {
     if (sensorInput.isControllerConnected()) {
       connDot.className = 'conn-dot connected';
       connText.textContent = '📱 Phone controller connected!';
-      btnStart.disabled = false;
-      btnStart.querySelector('.btn-icon').textContent = '⛩️';
-      btnStart.childNodes[2].textContent = ' Start Game!';
+      btnWaiting.style.display = 'none';
+      startButtons.style.display = 'flex';
 
       if (gameConnDot) {
         gameConnDot.className = 'conn-dot-small connected';
@@ -66,6 +72,8 @@ function initSensorInput() {
     } else {
       connDot.className = 'conn-dot disconnected';
       connText.textContent = 'Waiting for phone controller...';
+      btnWaiting.style.display = 'block';
+      startButtons.style.display = 'none';
 
       if (gameConnDot) {
         gameConnDot.className = 'conn-dot-small disconnected';
@@ -77,7 +85,20 @@ function initSensorInput() {
   // Wire up remote restart command
   sensorInput.onRestartCommand = () => {
     if (game) game.destroy();
-    startGame();
+    startGame(currentMode);
+  };
+
+  // Wire up remote end game command
+  sensorInput.onEndGameCommand = () => {
+    if (game && game.state === 'playing') {
+      game.state = 'gameover';
+      if (game.onGameOver) {
+        game.onGameOver({
+          score: Math.floor(game.getScore()),
+          time: game.elapsedTime,
+        });
+      }
+    }
   };
 }
 
@@ -126,7 +147,10 @@ function updateHUD() {
 }
 
 // Start game
-function startGame() {
+function startGame(mode = 'endless') {
+  currentMode = mode;
+  audioEngine.init(); // Requires user gesture to unlock AudioContext
+
   if (sensorInput) {
     sensorInput.recalibrate();
     sensorInput.resetStats();
@@ -135,7 +159,9 @@ function startGame() {
   game = new Game(gameCanvas);
 
     game.onGameOver = (result) => {
+    audioEngine.playGameOver();
     finalScore.textContent = result.score;
+    document.getElementById('final-score-label').textContent = mode === 'workout' ? 'Workout Score' : 'Final Distance';
     const gestures = sensorInput ? sensorInput.getGestureState() : null;
     statJumps.textContent = gestures ? gestures.jumpCount : 0;
     statSquats.textContent = gestures ? gestures.squatCount : 0;
@@ -158,19 +184,35 @@ function startGame() {
   };
 
   showScreen(gameScreen);
-  game.start();
+  game.start(currentMode, audioEngine);
   updateHUD();
 }
 
 // ===== Event Listeners =====
 
-btnStart.addEventListener('click', () => {
-  startGame();
+btnStartEndless.addEventListener('click', () => {
+  startGame('endless');
+});
+
+btnStartWorkout.addEventListener('click', () => {
+  startGame('workout');
 });
 
 btnRestart.addEventListener('click', () => {
   if (game) game.destroy();
-  startGame();
+  startGame(currentMode);
+});
+
+btnEndGame.addEventListener('click', () => {
+  if (game && game.state === 'playing') {
+    game.state = 'gameover';
+    if (game.onGameOver) {
+      game.onGameOver({
+        score: Math.floor(game.getScore()),
+        time: game.elapsedTime,
+      });
+    }
+  }
 });
 
 btnHome.addEventListener('click', () => {
@@ -189,10 +231,11 @@ document.addEventListener('keydown', (e) => {
   if (!game || game.state !== 'playing') return;
   if (e.code === 'Space' || e.code === 'ArrowUp') {
     e.preventDefault();
-    game.player.jump();
+    if (game.player.jump() && audioEngine) audioEngine.playJump();
   }
   if (e.code === 'ArrowDown') {
     e.preventDefault();
+    if (!game.player.isSquatting && audioEngine) audioEngine.playSquat();
     game.player.squat(true);
   }
 });

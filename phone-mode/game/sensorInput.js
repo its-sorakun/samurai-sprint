@@ -9,6 +9,7 @@ export class SensorInput {
     this.ws = null;
     this.connected = false;
     this.onRestartCommand = null;
+    this.onEndGameCommand = null;
 
     // Raw sensor values
     this.accelX = 0;
@@ -68,6 +69,8 @@ export class SensorInput {
           }
         } else if (msg.type === 'restart') {
           if (this.onRestartCommand) this.onRestartCommand();
+        } else if (msg.type === 'endgame') {
+          if (this.onEndGameCommand) this.onEndGameCommand();
         } else if (msg.type === 'motion') {
           this.accelX = msg.x;
           this.accelY = msg.y;

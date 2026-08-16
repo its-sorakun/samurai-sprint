@@ -32,6 +32,19 @@ export class Game {
     this.difficultyTimer = 0;
     this.difficultyLevel = 1;
 
+    // Workout Mode State
+    this.gameMode = 'endless'; // 'endless' or 'workout'
+    this.audioEngine = null;
+    this.workoutState = 'rest'; // 'rest' or 'action'
+    this.workoutAction = null; // 'JUMP', 'SQUAT', 'JOG'
+    this.workoutTimer = 0; // ms
+    this.workoutScore = 0;
+    
+    // DOM Elements for workout
+    this.workoutOverlay = document.getElementById('workout-overlay');
+    this.workoutCommandEl = document.getElementById('workout-command');
+    this.workoutTimerEl = document.getElementById('workout-timer');
+
     // Initialize entities
     const groundY = this.renderer.getGroundY();
     this.player = new Player(groundY);
@@ -59,9 +72,22 @@ export class Game {
     window.addEventListener('resize', this._handleResize);
   }
 
-  start() {
+  start(mode = 'endless', audioEngine = null) {
     this.state = 'playing';
+    this.gameMode = mode;
+    this.audioEngine = audioEngine;
     this.score = 0;
+    this.workoutScore = 0;
+    
+    // Initialize workout state
+    if (this.gameMode === 'workout') {
+      this.workoutState = 'rest';
+      this.workoutTimer = 10000; // Increased from 5s to 10s
+      this.workoutOverlay.style.display = 'block';
+      this.updateWorkoutUI();
+    } else {
+      this.workoutOverlay.style.display = 'none';
+    }
     this.startTime = Date.now();
     this.elapsedTime = 0;
     this.speed = this.baseSpeed;
@@ -93,10 +119,13 @@ export class Game {
     if (!gestureState || !gestureState.calibrated) return;
 
     if (gestureState.isJumping && !this.wasJumping) {
-      this.player.jump();
+      if (this.player.jump() && this.audioEngine) this.audioEngine.playJump();
     }
     this.wasJumping = gestureState.isJumping;
 
+    if (gestureState.isSquatting && !this.player.isSquatting && this.audioEngine) {
+      this.audioEngine.playSquat();
+    }
     this.player.squat(gestureState.isSquatting);
 
     // Store state for the fixed timestep physics loop
@@ -152,16 +181,20 @@ export class Game {
     this.speedMultiplier = 1 + this.jogBoost * 1.5;
     this.speed = baseRamp * this.speedMultiplier;
 
-    // Update score
-    this.score += this.speed * (dt / 1000) * 10;
+    if (this.gameMode === 'endless') {
+      // Endless mode score
+      this.score += this.speed * (dt / 1000) * 10;
+    } else if (this.gameMode === 'workout') {
+      // Workout Mode Logic
+      this._updateWorkout(dt);
+    }
 
-    // Update entities
-    this.player.update(dt);
-    this.obstacleManager.update(dt, this.speed);
-    this.renderer.update(dt, this.speed);
-
-    // Collision detection
+    // Always update obstacles and check collisions in both modes now!
+    this.obstacleManager.update(dt, this.speed, this.gameMode, this.workoutState, this.workoutAction);
     this._checkCollisions();
+
+    this.player.update(dt);
+    this.renderer.update(dt, this.speed);
 
     // Flash fade
     if (this.flashAlpha > 0) {
@@ -188,7 +221,7 @@ export class Game {
         this.state = 'gameover';
         if (this.onGameOver) {
           this.onGameOver({
-            score: Math.floor(this.score),
+            score: this.getScore(),
             time: this.elapsedTime,
           });
         }
@@ -215,7 +248,7 @@ export class Game {
     // Draw background
     this.renderer.draw();
 
-    // Draw obstacles
+    // Draw obstacles in both modes
     this.obstacleManager.draw(ctx);
 
     // Draw player
@@ -229,11 +262,10 @@ export class Game {
   }
 
   getScore() {
-    return Math.floor(this.score);
+    return Math.floor(this.gameMode === 'workout' ? this.workoutScore : this.score);
   }
 
   getSpeedPercent() {
-    // 0..1 representing speed from base to max
     return Math.min(1, (this.speedMultiplier - 1) / (this.maxSpeedMultiplier - 1));
   }
 
@@ -241,8 +273,86 @@ export class Game {
     return Math.floor(this.elapsedTime / 1000);
   }
 
+  _updateWorkout(dt) {
+    this.workoutTimer -= dt;
+    
+    // Workout action logic
+    if (this.workoutState === 'action') {
+      if (this.workoutAction === 'JUMP' && this.player.state === 'jump' && !this._workoutJumpRewarded) {
+        this.workoutScore += 100;
+        this._workoutJumpRewarded = true;
+        if (this.audioEngine) this.audioEngine.playCoin();
+      }
+      if (this.player.state !== 'jump') this._workoutJumpRewarded = false; // Reset for next jump
+
+      if (this.workoutAction === 'SQUAT' && this.player.state === 'squat' && !this._workoutSquatRewarded) {
+        this.workoutScore += 10; // points per frame essentially while squatted, or maybe just a flat reward? 
+        // Better:
+        if (!this._squatAccumulator) this._squatAccumulator = 0;
+        this._squatAccumulator += dt;
+        if (this._squatAccumulator > 500) { // Every 0.5s of squatting
+          this.workoutScore += 50;
+          this._squatAccumulator = 0;
+          if (this.audioEngine) this.audioEngine.playCoin();
+        }
+      }
+
+      if (this.workoutAction === 'JOG' && this.currentJogDetected) {
+        this.workoutScore += (dt / 1000) * 100; // 100 points per second of jogging
+      }
+    }
+
+    // State transitions
+    if (this.workoutTimer <= 0) {
+      if (this.workoutState === 'rest') {
+        // Transition to Action
+        this.workoutState = 'action';
+        const actions = ['JUMP', 'SQUAT', 'JOG'].filter(a => a !== this._lastWorkoutAction);
+        this.workoutAction = actions[Math.floor(Math.random() * actions.length)];
+        this._lastWorkoutAction = this.workoutAction;
+        this.workoutTimer = Math.floor(Math.random() * 10000) + 10000; // 10 to 20 seconds
+        
+        if (this.audioEngine) this.audioEngine.playBeep(true); // High beep to start
+      } else {
+        // Transition to Rest
+        this.workoutState = 'rest';
+        this.workoutAction = 'REST';
+        this.workoutTimer = 10000; // Increased from 5s to 10s
+        
+        if (this.audioEngine) this.audioEngine.playBeep(false); // Low beep to stop
+      }
+    }
+
+    // Beep on countdown (last 3 seconds of rest)
+    if (this.workoutState === 'rest' && this.workoutTimer <= 3000) {
+      const sec = Math.ceil(this.workoutTimer / 1000);
+      if (sec !== this._lastBeepSec) {
+        this._lastBeepSec = sec;
+        if (this.audioEngine) this.audioEngine.playBeep(false);
+      }
+    } else {
+      this._lastBeepSec = null;
+    }
+
+    this.updateWorkoutUI();
+  }
+
+  updateWorkoutUI() {
+    if (this.workoutState === 'rest') {
+      this.workoutCommandEl.textContent = 'REST';
+      this.workoutCommandEl.style.color = 'white';
+    } else {
+      this.workoutCommandEl.textContent = this.workoutAction + '!';
+      if (this.workoutAction === 'JUMP') this.workoutCommandEl.style.color = '#5a8a5e'; // Green
+      if (this.workoutAction === 'SQUAT') this.workoutCommandEl.style.color = '#d4a854'; // Gold
+      if (this.workoutAction === 'JOG') this.workoutCommandEl.style.color = '#f4a7bb'; // Pink
+    }
+    this.workoutTimerEl.textContent = Math.ceil(this.workoutTimer / 1000) + 's';
+  }
+
   destroy() {
     this.state = 'idle';
+    if (this.workoutOverlay) this.workoutOverlay.style.display = 'none';
     window.removeEventListener('resize', this._handleResize);
   }
 }

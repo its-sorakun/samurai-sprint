@@ -21,14 +21,28 @@ export class ObstacleManager {
     return this.minSpawnInterval + Math.random() * range;
   }
 
-  update(dt, speed) {
+  update(dt, speed, gameMode = 'endless', workoutState = null, workoutAction = null) {
     this.spawnTimer += dt;
+
+    // Determine allowed types
+    let allowedTypes = ['torii', 'lantern', 'bamboo', 'torii', 'lantern'];
+    if (gameMode === 'workout') {
+      if (workoutState === 'rest' || workoutAction === 'JOG') {
+        allowedTypes = []; // Nothing spawns during rest or sprint/jog
+      } else if (workoutAction === 'JUMP') {
+        allowedTypes = ['lantern', 'bamboo'];
+      } else if (workoutAction === 'SQUAT') {
+        allowedTypes = ['torii'];
+      }
+    }
 
     // Spawn new obstacle
     if (this.spawnTimer >= this.nextSpawnAt / this.difficultyMultiplier) {
       this.spawnTimer = 0;
       this.nextSpawnAt = this._randomInterval();
-      this._spawnObstacle();
+      if (allowedTypes.length > 0) {
+        this._spawnObstacle(allowedTypes);
+      }
     }
 
     // Move obstacles
@@ -45,8 +59,7 @@ export class ObstacleManager {
     this.obstacles = this.obstacles.filter(obs => obs.x + obs.width > -50);
   }
 
-  _spawnObstacle() {
-    const types = ['torii', 'lantern', 'bamboo', 'torii', 'lantern'];
+  _spawnObstacle(types) {
     const type = types[Math.floor(Math.random() * types.length)];
 
     let obs;

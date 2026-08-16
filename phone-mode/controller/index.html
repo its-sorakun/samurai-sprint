@@ -184,6 +184,7 @@
       font-size: 3.5rem; font-weight: 900; font-family: 'Outfit', sans-serif;
       background: linear-gradient(135deg, var(--gold-accent), var(--gold-bright));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin: 10px 0;
     }
     .stats-grid {
@@ -203,6 +204,30 @@
     }
     .btn-restart:hover { box-shadow: 0 8px 32px rgba(195, 60, 60, 0.5); transform: translateY(-2px); }
     .btn-restart:active { transform: scale(0.97); }
+
+    .btn-recalibrate {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 10px 0;
+        width: 100%;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .btn-end-game {
+        background-color: rgba(195, 60, 60, 0.2);
+        color: #ff8c8c;
+        border: 1px solid rgba(195, 60, 60, 0.5);
+        border-radius: 8px;
+        padding: 10px 0;
+        width: 100%;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -249,6 +274,11 @@
         <div class="instruction-item">🦘 Jump in real life to jump in game</div>
         <div class="instruction-item">🧎 Squat to duck under obstacles</div>
         <div class="instruction-item">🏃 Jog in place for speed boost</div>
+      </div>
+
+      <div style="margin-top: 20px; width: 100%; max-width: 320px;">
+          <button class="btn-recalibrate" id="btn-recalibrate">🔄 Recalibrate Sensor</button>
+          <button class="btn-end-game" id="btn-end-game">🛑 End Game</button>
       </div>
 
       <p class="note" style="margin-top: 15px;">Keep your phone in your hand or pocket. Both devices must be on the same WiFi.</p>
@@ -436,6 +466,15 @@
       document.getElementById('gameover-ui').style.display = 'none';
       document.getElementById('main-ui').style.display = 'flex';
     });
+
+    const btnEndGame = document.getElementById('btn-end-game');
+    if (btnEndGame) {
+      btnEndGame.addEventListener('click', () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'endgame' }));
+        }
+      });
+    }
   </script>
 </body>
 </html>
